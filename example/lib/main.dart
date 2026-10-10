@@ -6,7 +6,8 @@ import 'package:fomapay_flutter/fomapay_flutter.dart';
 
 final fomapay = FomaPay(
   publicKey: const String.fromEnvironment('FOMAPAY_PUBLIC_KEY'),
-  apiUrl: const String.fromEnvironment('FOMAPAY_API_URL', defaultValue: FomaPay.defaultApiUrl),
+  apiUrl: const String.fromEnvironment('FOMAPAY_API_URL',
+      defaultValue: FomaPay.defaultApiUrl),
 );
 
 void main() => runApp(const MaterialApp(home: ShopPage()));
@@ -28,7 +29,8 @@ class ShopPage extends StatelessWidget {
     );
     // L'écran du client n'est pas une preuve : votre serveur confirme la commande par webhook.
     messenger.showSnackBar(SnackBar(
-      content: Text(payment == null ? 'Paiement annulé' : 'Payé : ${payment.reference}'),
+      content: Text(
+          payment == null ? 'Paiement annulé' : 'Payé : ${payment.reference}'),
     ));
   }
 
