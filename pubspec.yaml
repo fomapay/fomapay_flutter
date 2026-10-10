@@ -1,0 +1,25 @@
+name: fomapay_flutter
+description: >-
+  SDK Flutter officiel de FomaPay : fenêtre de paiement prête à l'emploi (FomaPay Direct par QR code
+  et Mobile Money) pour Android, iOS, web et desktop.
+version: 0.1.0
+homepage: https://docs.fomapay.cd
+repository: https://github.com/fomapay/fomapay_flutter
+
+environment:
+  sdk: ^3.5.0
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  crypto: ^3.0.3
+  http: ^1.2.0
+  qr_flutter: ^4.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
