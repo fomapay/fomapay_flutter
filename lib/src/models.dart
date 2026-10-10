@@ -279,7 +279,7 @@ String formatAmount(num amount, Currency currency) {
 /// « 081 234 5678 », « 812345678 » ou « +243 81… » deviennent « +243812345678 ».
 /// Renvoie `null` si le numéro est incomplet.
 String? normalizePhone(String input) {
-  var digits = input.replaceAll(RegExp(r'D'), '');
+  var digits = input.replaceAll(RegExp(r'\D'), '');
   if (digits.startsWith('243')) digits = digits.substring(3);
   if (digits.startsWith('0')) digits = digits.substring(1);
   return digits.length == 9 ? '+243$digits' : null;
