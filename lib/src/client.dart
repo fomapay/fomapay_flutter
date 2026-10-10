@@ -57,7 +57,8 @@ class FomaPay {
   bool get livemode => publicKey.startsWith('pk_live_');
 
   /// Boutique liée à la clé, avec les modes de paiement que son niveau KYC autorise (mise en cache).
-  Future<StoreInfo> store() => _store ??= _request('GET', '/v1/store').then(StoreInfo.fromJson, onError: (Object e) {
+  Future<StoreInfo> store() => _store ??= _request('GET', '/v1/store')
+          .then(StoreInfo.fromJson, onError: (Object e) {
         _store = null;
         throw e;
       });
@@ -71,10 +72,14 @@ class FomaPay {
       ).then(Payment.fromJson);
 
   /// Relit un paiement par son identifiant ou sa référence (FP-…).
-  Future<Payment> getPayment(String id) => _request('GET', '/v1/payments/${Uri.encodeComponent(id)}').then(Payment.fromJson);
+  Future<Payment> getPayment(String id) =>
+      _request('GET', '/v1/payments/${Uri.encodeComponent(id)}')
+          .then(Payment.fromJson);
 
   /// Envoie la demande de débit (push USSD) sur le téléphone du client.
-  Future<Payment> payWithMobileMoney(String id, {required MobileOperator operator, required String phone}) => _request(
+  Future<Payment> payWithMobileMoney(String id,
+          {required MobileOperator operator, required String phone}) =>
+      _request(
         'POST',
         '/v1/payments/${Uri.encodeComponent(id)}/mobile-money',
         body: {'operator': operator.value, 'phone': phone},
@@ -98,7 +103,8 @@ class FomaPay {
       final payment = await getPayment(id);
       if (!payment.isPending) return payment;
       if (DateTime.now().isAfter(deadline)) {
-        throw const FomaPayException('ERROR_PAYMENT_TIMEOUT', "Le paiement n'a pas été confirmé à temps.");
+        throw const FomaPayException('ERROR_PAYMENT_TIMEOUT',
+            "Le paiement n'a pas été confirmé à temps.");
       }
       await Future<void>.delayed(interval);
     }
@@ -115,13 +121,15 @@ class FomaPay {
 
   /// 0,5 s, 1 s, 2 s… plafonné à 8 s, avec un aléa pour désynchroniser les clients.
   static Duration _backoff(int attempt) {
-    final delay = min(500 * (1 << min(attempt, 10)), _maxBackoff.inMilliseconds);
+    final delay =
+        min(500 * (1 << min(attempt, 10)), _maxBackoff.inMilliseconds);
     return Duration(milliseconds: delay ~/ 2 + _random.nextInt(delay ~/ 2 + 1));
   }
 
   /// Exécute une requête, avec nouvelles tentatives quand elle est rejouable sans risque
   /// (lecture, ou POST accompagné d'une clé d'idempotence).
-  Future<Map<String, dynamic>> _request(String method, String path, {Map<String, dynamic>? body, String? idempotencyKey}) async {
+  Future<Map<String, dynamic>> _request(String method, String path,
+      {Map<String, dynamic>? body, String? idempotencyKey}) async {
     final replayable = method == 'GET' || idempotencyKey != null;
     for (var attempt = 0;; attempt++) {
       FomaPayException error;
@@ -137,35 +145,50 @@ class FomaPay {
           });
         if (body != null) request.body = jsonEncode(body);
 
-        final response = await _http.send(request).then(http.Response.fromStream).timeout(timeout);
+        final response = await _http
+            .send(request)
+            .then(http.Response.fromStream)
+            .timeout(timeout);
         final data = _decode(response.body);
         if (response.statusCode >= 200 && response.statusCode < 300) {
           if (data is Map<String, dynamic>) return data;
-          throw FomaPayApiException('ERROR_INVALID_RESPONSE', "Réponse illisible de l'API FomaPay.", status: response.statusCode);
+          throw FomaPayApiException(
+              'ERROR_INVALID_RESPONSE', "Réponse illisible de l'API FomaPay.",
+              status: response.statusCode);
         }
 
-        final envelope = data is Map && data['error'] is Map ? data['error'] as Map : const {};
+        final envelope = data is Map && data['error'] is Map
+            ? data['error'] as Map
+            : const {};
         error = FomaPayApiException(
           envelope['code'] as String? ?? 'ERROR_UNKNOWN',
-          envelope['message'] as String? ?? 'Erreur HTTP ${response.statusCode}',
+          envelope['message'] as String? ??
+              'Erreur HTTP ${response.statusCode}',
           status: response.statusCode,
-          details: envelope['details'] is Map ? Map<String, dynamic>.from(envelope['details'] as Map) : const {},
+          details: envelope['details'] is Map
+              ? Map<String, dynamic>.from(envelope['details'] as Map)
+              : const {},
         );
         if (response.statusCode == 429) {
           // La gateway a refusé la requête avant tout traitement : toujours rejouable.
           retry = true;
-          final retryAfter = int.tryParse(response.headers['retry-after'] ?? '') ?? 0;
-          if (retryAfter > 0) wait = Duration(seconds: min(retryAfter, _maxBackoff.inSeconds));
+          final retryAfter =
+              int.tryParse(response.headers['retry-after'] ?? '') ?? 0;
+          if (retryAfter > 0) {
+            wait = Duration(seconds: min(retryAfter, _maxBackoff.inSeconds));
+          }
         } else {
           retry = response.statusCode >= 500 && replayable;
         }
       } on FomaPayException {
         rethrow;
       } on TimeoutException {
-        error = const FomaPayNetworkException('ERROR_TIMEOUT', "FomaPay n'a pas répondu dans le délai imparti.");
+        error = const FomaPayNetworkException(
+            'ERROR_TIMEOUT', "FomaPay n'a pas répondu dans le délai imparti.");
         retry = replayable;
       } catch (_) {
-        error = const FomaPayNetworkException('ERROR_NETWORK', 'Impossible de joindre FomaPay. Vérifiez votre connexion Internet.');
+        error = const FomaPayNetworkException('ERROR_NETWORK',
+            'Impossible de joindre FomaPay. Vérifiez votre connexion Internet.');
         retry = replayable;
       }
 

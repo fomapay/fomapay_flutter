@@ -11,7 +11,8 @@
 library;
 
 export 'src/checkout/checkout_controller.dart';
-export 'src/checkout/checkout_sheet.dart' show CheckoutCustomization, FomaPayCheckout, FomaPayCheckoutSheet;
+export 'src/checkout/checkout_sheet.dart'
+    show CheckoutCustomization, FomaPayCheckout, FomaPayCheckoutSheet;
 export 'src/client.dart';
 export 'src/errors.dart';
 export 'src/models.dart';

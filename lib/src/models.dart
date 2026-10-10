@@ -8,7 +8,8 @@ enum Currency {
   /// Code ISO envoyé à l'API.
   final String code;
 
-  static Currency parse(String? code) => values.firstWhere((c) => c.code == code, orElse: () => usd);
+  static Currency parse(String? code) =>
+      values.firstWhere((c) => c.code == code, orElse: () => usd);
 }
 
 /// Modes de paiement proposés au client.
@@ -49,7 +50,8 @@ enum PaymentStatus {
   failed,
   expired;
 
-  static PaymentStatus parse(String? value) => values.firstWhere((s) => s.name == value, orElse: () => pending);
+  static PaymentStatus parse(String? value) =>
+      values.firstWhere((s) => s.name == value, orElse: () => pending);
 }
 
 /// Client final d'un paiement.
@@ -60,8 +62,10 @@ class Customer {
   final String? phone;
   final String? email;
 
-  factory Customer.fromJson(Map<String, dynamic> json) =>
-      Customer(name: json['name'] as String?, phone: json['phone'] as String?, email: json['email'] as String?);
+  factory Customer.fromJson(Map<String, dynamic> json) => Customer(
+      name: json['name'] as String?,
+      phone: json['phone'] as String?,
+      email: json['email'] as String?);
 
   Map<String, dynamic> toJson() => {
         if (name != null) 'name': name,
@@ -109,7 +113,8 @@ class PaymentParams {
         if (orderId != null) 'orderId': orderId,
         if (description != null) 'description': description,
         if (customer != null) 'customer': customer!.toJson(),
-        if (paymentModes != null) 'paymentModes': [for (final mode in paymentModes!) mode.value],
+        if (paymentModes != null)
+          'paymentModes': [for (final mode in paymentModes!) mode.value],
         if (callbackUrl != null) 'callbackUrl': callbackUrl,
         if (metadata != null) 'metadata': metadata,
       };
@@ -180,7 +185,8 @@ class Payment {
   bool get isSuccessful => status == PaymentStatus.success;
 
   /// Le paiement attend encore le client ou l'opérateur.
-  bool get isPending => status == PaymentStatus.pending || status == PaymentStatus.processing;
+  bool get isPending =>
+      status == PaymentStatus.pending || status == PaymentStatus.processing;
 
   factory Payment.fromJson(Map<String, dynamic> json) => Payment(
         id: json['id'] as String? ?? '',
@@ -193,8 +199,13 @@ class Payment {
         channel: json['channel'] as String?,
         orderId: json['orderId'] as String?,
         description: json['description'] as String?,
-        customer: json['customer'] is Map ? Customer.fromJson(Map<String, dynamic>.from(json['customer'] as Map)) : null,
-        metadata: json['metadata'] is Map ? Map<String, dynamic>.from(json['metadata'] as Map) : null,
+        customer: json['customer'] is Map
+            ? Customer.fromJson(
+                Map<String, dynamic>.from(json['customer'] as Map))
+            : null,
+        metadata: json['metadata'] is Map
+            ? Map<String, dynamic>.from(json['metadata'] as Map)
+            : null,
         paymentModes: PaymentMode.parseList(json['paymentModes']),
         callbackUrl: json['callbackUrl'] as String?,
         payerPhone: json['payerPhone'] as String?,
@@ -243,7 +254,12 @@ class StoreInfo {
 
 /// Événement de webhook : `payment.succeeded`, `payment.failed`…
 class WebhookEvent {
-  const WebhookEvent({required this.id, required this.type, required this.created, required this.livemode, required this.data});
+  const WebhookEvent(
+      {required this.id,
+      required this.type,
+      required this.created,
+      required this.livemode,
+      required this.data});
 
   final String id;
   final String type;
@@ -258,13 +274,16 @@ class WebhookEvent {
         type: json['type'] as String? ?? '',
         created: json['created'] as String? ?? '',
         livemode: json['livemode'] == true,
-        data: Payment.fromJson(json['data'] is Map ? Map<String, dynamic>.from(json['data'] as Map) : const {}),
+        data: Payment.fromJson(json['data'] is Map
+            ? Map<String, dynamic>.from(json['data'] as Map)
+            : const {}),
       );
 }
 
 /// « 1 000 CDF », « 12,50 USD ».
 String formatAmount(num amount, Currency currency) {
-  final decimals = currency == Currency.cdf && amount == amount.roundToDouble() ? 0 : 2;
+  final decimals =
+      currency == Currency.cdf && amount == amount.roundToDouble() ? 0 : 2;
   final parts = amount.abs().toStringAsFixed(decimals).split('.');
   final digits = parts[0];
   final grouped = StringBuffer();

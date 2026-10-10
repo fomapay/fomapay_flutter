@@ -26,7 +26,8 @@ enum CheckoutPhase {
 /// Logique de la fenêtre de paiement, indépendante de l'interface : crée le paiement,
 /// suit son état et expose ce qu'il faut afficher. Utilisable seule pour une interface sur mesure.
 class CheckoutController extends ChangeNotifier {
-  CheckoutController(this.fomapay, this.params, {this.pollInterval = const Duration(milliseconds: 2500)});
+  CheckoutController(this.fomapay, this.params,
+      {this.pollInterval = const Duration(milliseconds: 2500)});
 
   final FomaPay fomapay;
   final PaymentParams params;
@@ -53,7 +54,9 @@ class CheckoutController extends ChangeNotifier {
     final requested = payment?.paymentModes ?? const <PaymentMode>[];
     return [
       for (final mode in PaymentMode.values)
-        if (allowed.contains(mode) && (requested.isEmpty || requested.contains(mode))) mode,
+        if (allowed.contains(mode) &&
+            (requested.isEmpty || requested.contains(mode)))
+          mode,
     ];
   }
 
@@ -82,7 +85,8 @@ class CheckoutController extends ChangeNotifier {
               metadata: params.metadata,
             );
       _firstAttempt = false;
-      final results = await Future.wait([fomapay.store(), fomapay.createPayment(attempt)]);
+      final results =
+          await Future.wait([fomapay.store(), fomapay.createPayment(attempt)]);
       if (_disposed) return;
       store = results[0] as StoreInfo;
       payment = results[1] as Payment;
@@ -105,10 +109,12 @@ class CheckoutController extends ChangeNotifier {
 
   /// Envoie la demande de débit sur le téléphone du client.
   Future<void> payWithMobileMoney(MobileOperator operator, String phone) =>
-      _act(() => fomapay.payWithMobileMoney(payment!.id, operator: operator, phone: phone));
+      _act(() => fomapay.payWithMobileMoney(payment!.id,
+          operator: operator, phone: phone));
 
   /// Force l'issue du paiement (sandbox).
-  Future<void> simulate({required bool success}) => _act(() => fomapay.simulatePayment(payment!.id, success: success));
+  Future<void> simulate({required bool success}) =>
+      _act(() => fomapay.simulatePayment(payment!.id, success: success));
 
   Future<void> _act(Future<Payment> Function() action) async {
     if (busy || payment == null) return;

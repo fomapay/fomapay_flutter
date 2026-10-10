@@ -9,7 +9,9 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 /// Faux backend : un paiement en mémoire, dont le test pilote l'état.
 class FakeApi {
-  FakeApi({this.storeModes = const ['fomapay_direct', 'mobile_money'], this.failCreation = 0});
+  FakeApi(
+      {this.storeModes = const ['fomapay_direct', 'mobile_money'],
+      this.failCreation = 0});
 
   final List<String> storeModes;
 
@@ -40,15 +42,22 @@ class FakeApi {
         httpClient: MockClient((request) async {
           final path = request.url.path;
           calls.add('${request.method} $path');
-          http.Response ok(Object body) => http.Response(jsonEncode(body), 200, headers: {'content-type': 'application/json; charset=utf-8'});
+          http.Response ok(Object body) => http.Response(jsonEncode(body), 200,
+              headers: {'content-type': 'application/json; charset=utf-8'});
 
-          if (path == '/v1/store') return ok({'id': 's1', 'name': 'Chez Foma', 'paymentModes': storeModes});
+          if (path == '/v1/store') {
+            return ok(
+                {'id': 's1', 'name': 'Chez Foma', 'paymentModes': storeModes});
+          }
           if (path == '/v1/payments' && request.method == 'POST') {
             if (failCreation > 0) {
               failCreation--;
               return http.Response(
                 jsonEncode({
-                  'error': {'code': 'ERROR_LEVEL_0_LIMIT_REACHED', 'message': 'Plafond mensuel atteint.'}
+                  'error': {
+                    'code': 'ERROR_LEVEL_0_LIMIT_REACHED',
+                    'message': 'Plafond mensuel atteint.'
+                  }
                 }),
                 403,
                 headers: {'content-type': 'application/json; charset=utf-8'},
@@ -62,15 +71,26 @@ class FakeApi {
             payerPhone = (jsonDecode(request.body) as Map)['phone'] as String;
             status = 'processing';
           } else if (path.endsWith('/simulate')) {
-            status = (jsonDecode(request.body) as Map)['outcome'] == 'success' ? 'success' : 'failed';
+            status = (jsonDecode(request.body) as Map)['outcome'] == 'success'
+                ? 'success'
+                : 'failed';
           }
           return ok(payment);
         }),
       );
 }
 
+/// La fenêtre affiche des indicateurs animés en continu : pumpAndSettle n'aboutirait jamais.
+/// On avance donc le temps d'un peu plus que la durée des transitions.
+Future<void> settle(WidgetTester tester) async {
+  for (var i = 0; i < 12; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+}
+
 void main() {
-  const params = PaymentParams(amount: 1000, currency: Currency.cdf, orderId: 'CMD-2026-001');
+  const params = PaymentParams(
+      amount: 1000, currency: Currency.cdf, orderId: 'CMD-2026-001');
   const poll = Duration(milliseconds: 100);
 
   /// Affiche une page avec un bouton qui ouvre la fenêtre de paiement ; renvoie de quoi lire son résultat.
@@ -82,10 +102,12 @@ void main() {
         builder: (context) => Scaffold(
           body: Center(
             child: ElevatedButton(
-              onPressed: () async => results.add(await showModalBottomSheet<Payment>(
+              onPressed: () async =>
+                  results.add(await showModalBottomSheet<Payment>(
                 context: context,
                 isScrollControlled: true,
-                builder: (_) => FomaPayCheckoutSheet(fomapay: fomapay, params: params, pollInterval: poll),
+                builder: (_) => FomaPayCheckoutSheet(
+                    fomapay: fomapay, params: params, pollInterval: poll),
               )),
               child: const Text('Payer'),
             ),
@@ -94,11 +116,13 @@ void main() {
       ),
     ));
     await tester.tap(find.text('Payer'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     return results;
   }
 
-  testWidgets('FomaPay Direct : QR code, simulation d’un succès, paiement renvoyé', (tester) async {
+  testWidgets(
+      'FomaPay Direct : QR code, simulation d’un succès, paiement renvoyé',
+      (tester) async {
     final api = FakeApi();
     final results = await open(tester, api);
 
@@ -110,22 +134,24 @@ void main() {
     expect(find.text('FP-TEST1'), findsOneWidget);
 
     await tester.tap(find.text('Simuler un succès'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.text('Paiement réussi'), findsOneWidget);
     expect(find.text('Référence FP-TEST1'), findsOneWidget);
 
     await tester.tap(find.text('Terminer'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(results.single?.isSuccessful, isTrue);
     expect(results.single?.reference, 'FP-TEST1');
   });
 
-  testWidgets('Mobile Money : numéro validé, attente sur le téléphone, confirmation par interrogation', (tester) async {
+  testWidgets(
+      'Mobile Money : numéro validé, attente sur le téléphone, confirmation par interrogation',
+      (tester) async {
     final api = FakeApi();
     await open(tester, api);
 
     await tester.tap(find.text('Mobile Money'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.byType(QrImageView), findsNothing);
 
     await tester.enterText(find.byType(TextField), '81 23');
@@ -145,45 +171,48 @@ void main() {
     // L'opérateur confirme : la fenêtre le découvre à l'interrogation suivante.
     api.status = 'success';
     await tester.pump(poll);
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.text('Paiement réussi'), findsOneWidget);
   });
 
-  testWidgets('un refus propose de réessayer avec un nouveau paiement', (tester) async {
+  testWidgets('un refus propose de réessayer avec un nouveau paiement',
+      (tester) async {
     final api = FakeApi();
     final results = await open(tester, api);
 
     api.failureReason = 'Solde insuffisant.';
     await tester.tap(find.text('Simuler un échec'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.text('Paiement refusé'), findsOneWidget);
     expect(find.text('Solde insuffisant.'), findsOneWidget);
 
     api.failureReason = null;
     await tester.tap(find.text('Réessayer'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(api.created, 2);
     expect(find.text('FP-TEST2'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Fermer'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(results, [null]);
   });
 
-  testWidgets('boutique Niveau 0 : seul FomaPay Direct est proposé', (tester) async {
+  testWidgets('boutique Niveau 0 : seul FomaPay Direct est proposé',
+      (tester) async {
     await open(tester, FakeApi(storeModes: const ['fomapay_direct']));
     expect(find.byType(QrImageView), findsOneWidget);
     expect(find.text('Mobile Money'), findsNothing);
   });
 
-  testWidgets('une création refusée affiche le message de l’API, puis réessaie', (tester) async {
+  testWidgets('une création refusée affiche le message de l’API, puis réessaie',
+      (tester) async {
     final api = FakeApi(failCreation: 1);
     await open(tester, api);
     expect(find.text('Paiement indisponible'), findsOneWidget);
     expect(find.text('Plafond mensuel atteint.'), findsOneWidget);
 
     await tester.tap(find.text('Réessayer'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.byType(QrImageView), findsOneWidget);
   });
 }
